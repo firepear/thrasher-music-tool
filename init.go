@@ -69,7 +69,7 @@ func init() {
 	flag.StringVar(&fmusic, "m", "", "music directory to scan")
 	flag.StringVar(&ffilter, "f", "", "filter format string to operate on")
 	flag.StringVar(&forder, "ob", "", "comma-delineated list of attributes to order query by")
-	flag.StringVar(&ftrim, "t", "", "prefix to remove from track paths")
+	flag.StringVar(&ftrim, "t", "", "prefix to remove from track paths (defaults to music dir)")
 	flag.StringVar(&ffadd, "fa", "", "add facet to tracks")
 	flag.BoolVar(&ffls, "fl", false, "list facets on tracks")
 	flag.StringVar(&ffrm, "fr", "", "remove facet from tracks")
@@ -82,6 +82,10 @@ func init() {
 	// ditto musicdir
 	if fmusic != "" {
 		conf.MusicDir = fmusic
+	}
+	// set trim if not specified
+	if ftrim == "" {
+		ftrim = conf.MusicDir
 	}
 	// and if we still don't have a dbfile, bail
 	if conf.DbFile == "" {

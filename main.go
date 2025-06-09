@@ -10,6 +10,25 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func runFilter() {
+	var err error
+	// query catalog and produce output
+	if trks == nil {
+		// unless trks isn't set, which means a filter hasn't been set
+		fmt.Println("running a query requires a filter to be set; exiting")
+		os.Exit(1)
+	}
+	trks, err = cat.Query(forder, flimit, foffset)
+	if err != nil {
+		fmt.Printf("error querying catalog: %s\n", err)
+		os.Exit(2)
+	}
+	if fdebug {
+		fmt.Println("DEBUG :: runQuery")
+		fmt.Printf("\ttrks: %d\n", len(trks))
+	}
+}
+
 func main() {
 	if fversion {
 		fmt.Println(ver)
@@ -18,7 +37,7 @@ func main() {
 
 	var err error
 	if fdebug {
-		fmt.Println("DEBUG> Config")
+		fmt.Println("DEBUG :: Config")
 		fmt.Printf("\tDbFile: %s\n\tMusicDir: %s\n\tArtistCutoff: %d\n",
 			conf.DbFile, conf.MusicDir, conf.ArtistCutoff)
 	}
@@ -50,6 +69,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer cat.Close()
+	if fdebug {
+		fmt.Println("DEBUG :: Catalog")
+		fmt.Printf("\tArtists: %d\n\tFacets: %d\n\tTracks: %d\n\tPrefix: '%s'\n",
+			len(cat.Artists), len(cat.Facets), cat.TrackCount, cat.TrimPrefix)
+	}
 
 	// handle setting filter, if we have a format string
 	if ffilter != "" {
@@ -60,7 +84,8 @@ func main() {
 		}
 		trks = []string{}
 		if fdebug {
-			fmt.Printf("DEBUG> filter: '%s', %v, %d\n", cat.FltrStr, cat.FltrVals, cat.FltrCount)
+			fmt.Printf("DEBUG :: Filter\n\t'%s', %v, %d\n",
+				cat.FltrStr, cat.FltrVals, cat.FltrCount)
 		}
 	}
 
@@ -93,19 +118,9 @@ func main() {
 			fmt.Println(trk)
 		}
 	case fquery || fqquery:
-		// query catalog and produce output
-		if trks == nil {
-			// unless trks isn't set, which means a filter hasn't been set
-			fmt.Println("running a query requires a filter to be set; exiting")
-			os.Exit(1)
-		}
-		trks, err = cat.Query(forder, flimit, foffset)
-		if err != nil {
-			fmt.Printf("error querying catalog: %s\n", err)
-			os.Exit(2)
-		}
+		runFilter()
 		if fdebug {
-			fmt.Printf("DEBUG> query: '%s', %v\n----\n", cat.QueryStr, cat.QueryVals)
+			fmt.Printf("DEBUG :: Query\n\t'%s', %v\n", cat.QueryStr, cat.QueryVals)
 		}
 		if fqquery {
 			// fetch and print track details
@@ -129,13 +144,18 @@ func main() {
 				fmt.Println(trk)
 			}
 		}
-	case ffadd != "":
 	case ffls:
-		if trks == nil {
-			// unless trks isn't set, which means a filter hasn't been set
-			fmt.Println("listing facets requires a filter to be set; exiting")
-			os.Exit(1)
+		runFilter()
+		for _, trk := range trks {
+			i := cat.TrkInfo(trk)
+			fmt.Println(trk, "::", i.Facets)
 		}
+	case ffadd != "":
+		runFilter()
+		// TODO get file mtime, convert to time.Time
+		// TODO if facets is len zero, set genre tag
+		// TODO add facet to DB, set trk mtime to now
+		// TODO set file mtime to original
 	case ffrm != "":
 	default:
 		fmt.Println("No op requested")
